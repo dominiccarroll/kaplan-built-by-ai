@@ -1,0 +1,83 @@
+<!-- Dominic Carroll -->
+<!-- Everything below this comment was 100% written by ChatGPT -->
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Kaplan-Meier Curve Generator</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+  <h1>Kaplan-Meier Curve Generator</h1>
+  <textarea id="inputData" rows="10" cols="50"></textarea><br><br>
+  <button onclick="generateKMCurve()">Generate Kaplan-Meier Curve</button><br><br>
+  <div id="kmc"></div>
+
+  <script>
+    function generateKMCurve() {
+      var inputData = document.getElementById("inputData").value;
+      var data = d3.csvParse(inputData);
+
+      var survivalTimes = [];
+      var events = [];
+      for (var i = 0; i < data.length; i++) {
+        survivalTimes.push(Number(data[i]["Survival Time"]));
+        events.push(Number(data[i]["Event"]));
+      }
+
+      var n = survivalTimes.length;
+      var eventTimes = [];
+      var survivalProbabilities = [];
+
+      var observed = 0;
+      var censored = 0;
+      for (var i = 0; i < n; i++) {
+        if (events[i] == 1) {
+          observed++;
+          eventTimes.push(survivalTimes[i]);
+        } else {
+          censored++;
+        }
+        var sp = 1 - observed / (n - censored);
+        if (i > 0 && eventTimes[i] == eventTimes[i-1]) {
+          // Don't update the survival probability if it's a tied event time
+        } else {
+          survivalProbabilities.push(sp);
+        }
+      }
+
+      var newEventTimes = [];
+      var newSurvivalProbabilities = [];
+      for (var i = 0; i < eventTimes.length; i++) {
+        if (i == 0) {
+          newEventTimes.push(eventTimes[i]);
+          newSurvivalProbabilities.push(1);
+        }
+        newEventTimes.push(eventTimes[i]);
+        newEventTimes.push(eventTimes[i+1]);
+        var sp = i == 0 ? 1 : newSurvivalProbabilities[newSurvivalProbabilities.length-1];
+        newSurvivalProbabilities.push(sp * survivalProbabilities[i]);
+        newSurvivalProbabilities.push(sp * survivalProbabilities[i]);
+      }
+
+      var trace = {
+        x: newEventTimes,
+        y: newSurvivalProbabilities,
+        mode: 'lines+markers',
+        type: 'scatter',
+        step: 'pre'
+      };
+
+      var layout = {
+        title: 'Kaplan-Meier Curve',
+        xaxis: {title: 'Time'},
+        yaxis: {title: 'Survival Probability'}
+      };
+
+      var data = [trace];
+      Plotly.newPlot('kmc', data, layout);
+    }
+  </script>
+</body>
+</html>
